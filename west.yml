@@ -31,11 +31,6 @@ manifest:
   #
   # Please add items below based on alphabetical order
   projects:
-    - name: zephyr
-      repo-path: zephyr
-      remote: loganrex
-      revision: main
-      path: zephyr
     - name: openthread
       repo-path: openthread
       remote: loganrex
