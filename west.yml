@@ -23,8 +23,6 @@ manifest:
       url-base: https://github.com/zephyrproject-rtos
     - name: babblesim
       url-base: https://github.com/BabbleSim
-    - name: loganrex
-      url-base: https://github.com/loganrex
 
   group-filter: [-babblesim, -optional]
 
@@ -32,9 +30,8 @@ manifest:
   # Please add items below based on alphabetical order
   projects:
     - name: openthread
-      repo-path: openthread
-      remote: loganrex
       revision: main
+      url: https://github.com/loganrex/openthread
       path: modules/lib/openthread
     - name: acpica
       revision: 8d24867bc9c9d81c81eeac59391cda59333affd4
