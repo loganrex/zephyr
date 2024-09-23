@@ -903,11 +903,15 @@ struct net_buf *l2cap_data_pull(struct bt_conn *conn,
 	 */
 	struct net_buf *pdu = k_fifo_peek_head(&lechan->tx_queue);
 
+	/* We don't have anything to send for the current channel. We could
+	 * however have something to send on another channel that is attached to
+	 * the same ACL connection. Re-trigger the TX processor: it will call us
+	 * again and this time we will select another channel to pull data from.
+	 */
 	if (!pdu) {
 		bt_tx_irq_raise();
 		return NULL;
 	}
-	/* __ASSERT(pdu, "signaled ready but no PDUs in the TX queue"); */
 
 	if (bt_buf_has_view(pdu)) {
 		LOG_ERR("already have view on %p", pdu);
@@ -929,7 +933,7 @@ struct net_buf *l2cap_data_pull(struct bt_conn *conn,
 		struct bt_l2cap_hdr *hdr;
 		uint16_t pdu_len = get_pdu_len(lechan, pdu);
 
-		LOG_DBG("Adding L2CAP PDU header: buf %p chan %p len %zu / %zu",
+		LOG_DBG("Adding L2CAP PDU header: buf %p chan %p len %u / %u",
 			pdu, lechan, pdu_len, pdu->len);
 
 		LOG_HEXDUMP_DBG(pdu->data, pdu->len, "PDU payload");
@@ -3135,9 +3139,9 @@ static int bt_l2cap_dyn_chan_send(struct bt_l2cap_le_chan *le_chan, struct net_b
 		return -EINVAL;
 	}
 
-	CHECKIF(user_data_not_empty(buf)) {
-		LOG_DBG("Please clear user_data first");
-		return -EINVAL;
+	if (user_data_not_empty(buf)) {
+		/* There may be issues if user_data is not empty. */
+		LOG_WRN("user_data is not empty");
 	}
 
 	/* Prepend SDU length.

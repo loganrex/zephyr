@@ -187,7 +187,7 @@ static void usb_device_clock_init(void)
 
 #endif
 
-void z_arm_platform_init(void)
+void soc_reset_hook(void)
 {
 #ifndef CONFIG_NXP_IMXRT_BOOT_HEADER
 	/*
@@ -282,6 +282,11 @@ void __weak rt5xx_clock_init(void)
 #endif
 #if CONFIG_USB_DC_NXP_LPCIP3511
 	usb_device_clock_init();
+#endif
+
+#if (DT_NODE_HAS_COMPAT_STATUS(DT_NODELABEL(flexcomm0), nxp_lpc_i2s, okay) && CONFIG_I2S)
+	/* attach AUDIO PLL clock to FLEXCOMM1 (I2S_PDM) */
+	CLOCK_AttachClk(kAUDIO_PLL_to_FLEXCOMM0);
 #endif
 
 #if (DT_NODE_HAS_COMPAT_STATUS(DT_NODELABEL(flexcomm1), nxp_lpc_i2s, okay) && CONFIG_I2S)
@@ -433,6 +438,13 @@ void __weak rt5xx_clock_init(void)
 
 	/* Set main clock to FRO as deep sleep clock by default. */
 	POWER_SetDeepSleepClock(kDeepSleepClk_Fro);
+
+#if CONFIG_AUDIO_CODEC_WM8904
+	/* attach AUDIO PLL clock to MCLK */
+	CLOCK_AttachClk(kAUDIO_PLL_to_MCLK_CLK);
+	CLOCK_SetClkDiv(kCLOCK_DivMclkClk, 1);
+	SYSCTL1->MCLKPINDIR = SYSCTL1_MCLKPINDIR_MCLKPINDIR_MASK;
+#endif
 }
 
 #if CONFIG_MIPI_DSI
@@ -499,16 +511,16 @@ void __weak imxrt_deinit_display_interface(void)
 
 #endif
 
+extern void rt5xx_power_init(void);
+
 /**
  *
  * @brief Perform basic hardware initialization
  *
  * Initialize the interrupt controller device drivers.
  * Also initialize the timer device driver, if required.
- *
- * @return 0
  */
-static int nxp_rt500_init(void)
+void soc_early_init_hook(void)
 {
 	/* Initialize clocks with tool generated code */
 	rt5xx_clock_init();
@@ -524,8 +536,8 @@ static int nxp_rt500_init(void)
 	IOPCTL->PIO[1][15] = 0;
 	IOPCTL->PIO[3][28] = 0;
 	IOPCTL->PIO[3][29] = 0;
+#ifdef CONFIG_PM
+	rt5xx_power_init();
+#endif
 
-	return 0;
 }
-
-SYS_INIT(nxp_rt500_init, PRE_KERNEL_1, 0);

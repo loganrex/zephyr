@@ -18,7 +18,7 @@ import json
 
 from pytest import ExitCode
 from twisterlib.reports import ReportStatus
-from twisterlib.error import ConfigurationError
+from twisterlib.error import ConfigurationError, StatusAttributeError
 from twisterlib.environment import ZEPHYR_BASE, PYTEST_PLUGIN_INSTALLED
 from twisterlib.handlers import Handler, terminate_process, SUPPORTED_SIMS_IN_PYTEST
 from twisterlib.statuses import TwisterStatus
@@ -76,9 +76,7 @@ class Harness:
             key = value.name if isinstance(value, Enum) else value
             self._status = TwisterStatus[key]
         except KeyError:
-            logger.error(f'Harness assigned status "{value}"'
-                           f' without an equivalent in TwisterStatus.'
-                           f' Assignment was ignored.')
+            raise StatusAttributeError(self.__class__, value)
 
     def configure(self, instance):
         self.instance = instance
@@ -419,14 +417,10 @@ class Pytest(Harness):
             for fixture in handler.options.fixture:
                 command.append(f'--twister-fixture={fixture}')
 
+        command.extend(pytest_args_yaml)
+
         if handler.options.pytest_args:
             command.extend(handler.options.pytest_args)
-            if pytest_args_yaml:
-                logger.warning(f'The pytest_args ({handler.options.pytest_args}) specified '
-                               'in the command line will override the pytest_args defined '
-                               f'in the YAML file {pytest_args_yaml}')
-        else:
-            command.extend(pytest_args_yaml)
 
         return command
 
@@ -446,6 +440,9 @@ class Pytest(Harness):
                 f'--device-serial={hardware.serial}',
                 f'--device-serial-baud={hardware.baud}'
             ])
+
+        if hardware.flash_timeout:
+            command.append(f'--flash-timeout={hardware.flash_timeout}')
 
         options = handler.options
         if runner := hardware.runner or options.west_runner:
@@ -565,7 +562,8 @@ class Pytest(Harness):
     def _parse_report_file(self, report):
         tree = ET.parse(report)
         root = tree.getroot()
-        if elem_ts := root.find('testsuite'):
+
+        if (elem_ts := root.find('testsuite')) is not None:
             if elem_ts.get('failures') != '0':
                 self.status = TwisterStatus.FAIL
                 self.instance.reason = f"{elem_ts.get('failures')}/{elem_ts.get('tests')} pytest scenario(s) failed"
@@ -600,11 +598,16 @@ class Pytest(Harness):
 
 class Gtest(Harness):
     ANSI_ESCAPE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-    TEST_START_PATTERN = r".*\[ RUN      \] (?P<suite_name>[a-zA-Z_][a-zA-Z0-9_]*)\.(?P<test_name>[a-zA-Z_][a-zA-Z0-9_]*)"
-    TEST_PASS_PATTERN = r".*\[       OK \] (?P<suite_name>[a-zA-Z_][a-zA-Z0-9_]*)\.(?P<test_name>[a-zA-Z_][a-zA-Z0-9_]*)"
-    TEST_SKIP_PATTERN = r".*\[ DISABLED \] (?P<suite_name>[a-zA-Z_][a-zA-Z0-9_]*)\.(?P<test_name>[a-zA-Z_][a-zA-Z0-9_]*)"
-    TEST_FAIL_PATTERN = r".*\[  FAILED  \] (?P<suite_name>[a-zA-Z_][a-zA-Z0-9_]*)\.(?P<test_name>[a-zA-Z_][a-zA-Z0-9_]*)"
-    FINISHED_PATTERN = r".*\[==========\] Done running all tests\."
+    _NAME_PATTERN = "[a-zA-Z_][a-zA-Z0-9_]*"
+    _SUITE_TEST_NAME_PATTERN = f"(?P<suite_name>{_NAME_PATTERN})\\.(?P<test_name>{_NAME_PATTERN})"
+    TEST_START_PATTERN = f".*\\[ RUN      \\] {_SUITE_TEST_NAME_PATTERN}"
+    TEST_PASS_PATTERN = f".*\\[       OK \\] {_SUITE_TEST_NAME_PATTERN}"
+    TEST_SKIP_PATTERN = f".*\\[ DISABLED \\] {_SUITE_TEST_NAME_PATTERN}"
+    TEST_FAIL_PATTERN = f".*\\[  FAILED  \\] {_SUITE_TEST_NAME_PATTERN}"
+    FINISHED_PATTERN = (
+        ".*(?:\\[==========\\] Done running all tests\\.|"
+        + "\\[----------\\] Global test environment tear-down)"
+    )
 
     def __init__(self):
         super().__init__()

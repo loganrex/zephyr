@@ -56,7 +56,7 @@ static struct nxp_wifi_dev nxp_wifi0; /* static instance */
 
 static struct wlan_network nxp_wlan_network;
 
-#ifndef CONFIG_WIFI_NM_WPA_SUPPLICANT
+#ifndef CONFIG_WIFI_NM_HOSTAPD_AP
 static char uap_ssid[IEEEtypes_SSID_SIZE + 1];
 #endif
 
@@ -138,8 +138,11 @@ int nxp_wifi_wlan_event_callback(enum wlan_event_reason reason, void *data)
 		LOG_ERR("WLAN: initialization failed");
 		break;
 	case WLAN_REASON_AUTH_SUCCESS:
-		net_eth_carrier_on(g_mlan.netif);
 		LOG_DBG("WLAN: authenticated to nxp_wlan_network");
+		break;
+	case WLAN_REASON_ASSOC_SUCCESS:
+		net_if_dormant_off(g_mlan.netif);
+		LOG_DBG("WLAN: associated to nxp_wlan_network");
 		break;
 	case WLAN_REASON_SUCCESS:
 		LOG_DBG("WLAN: connected to nxp_wlan_network");
@@ -214,8 +217,12 @@ int nxp_wifi_wlan_event_callback(enum wlan_event_reason reason, void *data)
 		wifi_mgmt_raise_disconnect_result_event(g_mlan.netif, 0);
 		break;
 	case WLAN_REASON_LINK_LOST:
-		net_eth_carrier_off(g_mlan.netif);
+		net_if_dormant_on(g_mlan.netif);
 		LOG_WRN("WLAN: link lost");
+		break;
+	case WLAN_REASON_DISCONNECTED:
+		net_if_dormant_on(g_mlan.netif);
+		LOG_DBG("WLAN: deauth leaving");
 		break;
 	case WLAN_REASON_CHAN_SWITCH:
 		LOG_DBG("WLAN: channel switch");
@@ -224,7 +231,7 @@ int nxp_wifi_wlan_event_callback(enum wlan_event_reason reason, void *data)
 	case WLAN_REASON_UAP_SUCCESS:
 		net_eth_carrier_on(g_uap.netif);
 		LOG_DBG("WLAN: UAP Started");
-#ifndef CONFIG_WIFI_NM_WPA_SUPPLICANT
+#ifndef CONFIG_WIFI_NM_HOSTAPD_AP
 		ret = wlan_get_current_uap_network_ssid(uap_ssid);
 		if (ret != WM_SUCCESS) {
 			LOG_ERR("Failed to get Soft AP nxp_wlan_network ssid");
@@ -407,6 +414,12 @@ static int nxp_wifi_wlan_start(void)
 	}
 
 	s_nxp_wifi_State = NXP_WIFI_STARTED;
+
+	/* Initialize device as dormant */
+	net_if_dormant_on(g_mlan.netif);
+
+	/* L1 network layer (physical layer) is up */
+	net_eth_carrier_on(g_mlan.netif);
 
 	return 0;
 }
@@ -1745,7 +1758,7 @@ static const struct zep_wpa_supp_dev_ops nxp_wifi_drv_ops = {
 	.set_country              = wifi_nxp_wpa_supp_set_country,
 	.get_country              = wifi_nxp_wpa_supp_get_country,
 #ifdef CONFIG_NXP_WIFI_SOFTAP_SUPPORT
-#ifdef CONFIG_WIFI_NM_WPA_SUPPLICANT
+#ifdef CONFIG_WIFI_NM_HOSTAPD_AP
 	.hapd_init                = wifi_nxp_hostapd_dev_init,
 	.hapd_deinit              = wifi_nxp_hostapd_dev_deinit,
 #endif

@@ -125,7 +125,9 @@ static void esp32_clock_perip_init(void)
 		REG_CLR_BIT(PCR_PVT_MONITOR_FUNC_CLK_CONF_REG, PCR_PVT_MONITOR_FUNC_CLK_EN);
 		WRITE_PERI_REG(PCR_CTRL_CLK_OUT_EN_REG, 0);
 
+#if CONFIG_SERIAL_ESP32_USB
 		usb_serial_jtag_ll_enable_bus_clock(false);
+#endif
 	}
 
 	if ((rst_reason == RESET_REASON_CHIP_POWER_ON) ||
@@ -614,7 +616,6 @@ static int esp32_cpu_clock_configure(const struct esp32_cpu_clock_config *cpu_cf
 	rtc_cpu_freq_config_t old_config;
 	rtc_cpu_freq_config_t new_config;
 	rtc_clk_config_t rtc_clk_cfg = RTC_CLK_CONFIG_DEFAULT();
-	uint32_t uart_clock_src_hz;
 	bool ret;
 
 	rtc_clk_cfg.xtal_freq = cpu_cfg->xtal_freq;
@@ -685,14 +686,13 @@ static int esp32_cpu_clock_configure(const struct esp32_cpu_clock_config *cpu_cf
 	esp_cpu_set_cycle_count((uint64_t)esp_cpu_get_cycle_count() * rtc_clk_cfg.cpu_freq_mhz /
 				old_config.freq_mhz);
 
+#if !defined(ESP_CONSOLE_UART_NONE)
 #if !defined(CONFIG_SOC_SERIES_ESP32C2) && !defined(CONFIG_SOC_SERIES_ESP32C6)
+	uint32_t uart_clock_src_hz = esp_clk_apb_freq();
 #if ESP_ROM_UART_CLK_IS_XTAL
 	uart_clock_src_hz = (uint32_t)rtc_clk_xtal_freq_get() * MHZ(1);
-#else
-	uart_clock_src_hz = esp_clk_apb_freq();
 #endif
 
-#if !defined(ESP_CONSOLE_UART_NONE)
 	esp_rom_uart_set_clock_baudrate(ESP_CONSOLE_UART_NUM, uart_clock_src_hz,
 					ESP_CONSOLE_UART_BAUDRATE);
 #endif
@@ -703,8 +703,6 @@ static int esp32_cpu_clock_configure(const struct esp32_cpu_clock_config *cpu_cf
 static int clock_control_esp32_configure(const struct device *dev, clock_control_subsys_t sys,
 					 void *data)
 {
-
-	const struct esp32_clock_config *cfg = dev->config;
 	struct esp32_clock_config *new_cfg = data;
 	int ret = 0;
 

@@ -71,3 +71,18 @@
 		write-block-size = <1>;
 	};
 };
+
+&lpi2c2 {
+	pinctrl-0 = <&pinmux_lpi2c2>;
+	pinctrl-names = "default";
+};
+
+&lpi2c3 {
+	pinctrl-0 = <&pinmux_lpi2c3>;
+	pinctrl-names = "default";
+};
+
+&lpadc1 {
+	pinctrl-0 = <&pinmux_lpadc1>;
+	pinctrl-names = "default";
+};

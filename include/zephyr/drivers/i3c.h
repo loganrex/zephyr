@@ -950,6 +950,14 @@ struct i3c_device_desc {
 	const uint8_t init_dynamic_addr;
 
 	/**
+	 * Device support for SETAASA
+	 *
+	 * This will be used as an optimization for bus initializtion if the
+	 * device supports SETAASA.
+	 */
+	const bool supports_setaasa;
+
+	/**
 	 * Dynamic Address for this target device used for communication.
 	 *
 	 * This is to be set by the controller driver in one of
@@ -1754,6 +1762,23 @@ static inline int i3c_device_is_ibi_capable(struct i3c_device_desc *target)
 		== I3C_BCR_IBI_REQUEST_CAPABLE;
 }
 
+/**
+ * @brief Check if the target is controller capable
+ *
+ * This reads the BCR from the device descriptor struct to determine
+ * whether the target is controller capable
+ *
+ * Note that BCR must have been obtained from device and
+ * i3c_device_desc::bcr must be set.
+ *
+ * @return True if target is controller capable, false otherwise.
+ */
+static inline int i3c_device_is_controller_capable(struct i3c_device_desc *target)
+{
+	return I3C_BCR_DEVICE_ROLE(target->bcr)
+		== I3C_BCR_DEVICE_ROLE_I3C_CONTROLLER_CAPABLE;
+}
+
 /** @} */
 
 /**
@@ -2074,6 +2099,31 @@ int i3c_bus_init(const struct device *dev,
  * @retval -EIO General Input/Output error.
  */
 int i3c_device_basic_info_get(struct i3c_device_desc *target);
+
+/**
+ * @brief Check if the bus has a secondary controller.
+ *
+ * This reads the BCR from the device descriptor struct of all targets
+ * to determine whether a device is a secondary controller.
+ *
+ * @param dev Pointer to controller device driver instance.
+ *
+ * @return True if the bus has a secondary controller, false otherwise.
+ */
+bool i3c_bus_has_sec_controller(const struct device *dev);
+
+/**
+ * @brief Send the CCC DEFTGTS
+ *
+ * This builds the payload required for DEFTGTS and transmits it out
+ *
+ * @param dev Pointer to controller device driver instance.
+ *
+ * @retval 0 if successful.
+ * @retval -ENOMEM No memory to build the payload.
+ * @retval -EIO General Input/Output error.
+ */
+int i3c_bus_deftgts(const struct device *dev);
 
 /*
  * This needs to be after declaration of struct i3c_driver_api,

@@ -27,7 +27,14 @@
 	current-speed = <115200>;
 };
 
+&lpadc1 {
+	status = "okay";
+};
 
 &systick {
+	status = "okay";
+};
+
+&gpt2 {
 	status = "okay";
 };

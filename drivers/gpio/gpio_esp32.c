@@ -108,7 +108,6 @@ static int gpio_esp32_config(const struct device *dev,
 			     gpio_flags_t flags)
 {
 	const struct gpio_esp32_config *const cfg = dev->config;
-	struct gpio_esp32_data *data = dev->data;
 	uint32_t io_pin = (uint32_t) pin + ((cfg->gpio_port == 1 && pin < 32) ? 32 : 0);
 	uint32_t key;
 	int ret = 0;
@@ -474,15 +473,20 @@ static void gpio_esp32_isr(void *param);
 
 static int gpio_esp32_init(const struct device *dev)
 {
-	struct gpio_esp32_data *data = dev->data;
 	static bool isr_connected;
 
 	if (!isr_connected) {
-		esp_intr_alloc(DT_IRQN(DT_NODELABEL(gpio0)),
-			0,
+		int ret = esp_intr_alloc(DT_IRQ_BY_IDX(DT_NODELABEL(gpio0), 0, irq),
+			ESP_PRIO_TO_FLAGS(DT_IRQ_BY_IDX(DT_NODELABEL(gpio0), 0, priority)) |
+			ESP_INT_FLAGS_CHECK(DT_IRQ_BY_IDX(DT_NODELABEL(gpio0), 0, flags)),
 			(ISR_HANDLER)gpio_esp32_isr,
 			(void *)dev,
 			NULL);
+
+		if (ret != 0) {
+			LOG_ERR("could not allocate interrupt (err %d)", ret);
+			return ret;
+		}
 
 		isr_connected = true;
 	}

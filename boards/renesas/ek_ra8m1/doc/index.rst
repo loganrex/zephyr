@@ -100,6 +100,12 @@ The below features are currently supported on Zephyr OS for EK-RA8M1 board:
 +-----------+------------+----------------------+
 | I2C       | on-chip    | i2c                  |
 +-----------+------------+----------------------+
+| ENTROPY   | on-chip    | entropy              |
++-----------+------------+----------------------+
+| SPI       | on-chip    | spi                  |
++-----------+------------+----------------------+
+| FLASH     | on-chip    | flash                |
++-----------+------------+----------------------+
 
 Other hardware features are currently not supported by the port.
 

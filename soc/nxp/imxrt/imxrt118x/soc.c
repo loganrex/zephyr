@@ -224,6 +224,24 @@ static ALWAYS_INLINE void clock_init(void)
 	CLOCK_SetRootClock(kCLOCK_Root_Lpi2c0102, &rootCfg);
 #endif
 
+#if defined(CONFIG_I2C_MCUX_LPI2C) && \
+	(DT_NODE_HAS_STATUS(DT_NODELABEL(lpi2c3), okay) \
+	|| DT_NODE_HAS_STATUS(DT_NODELABEL(lpi2c4), okay))
+	/* Configure LPI2C0304 using SYS_PLL3_DIV2_CLK */
+	rootCfg.mux = kCLOCK_LPI2C0304_ClockRoot_MuxSysPll3Div2;
+	rootCfg.div = 4;
+	CLOCK_SetRootClock(kCLOCK_Root_Lpi2c0304, &rootCfg);
+#endif
+
+#if defined(CONFIG_I2C_MCUX_LPI2C) && \
+	(DT_NODE_HAS_STATUS(DT_NODELABEL(lpi2c5), okay) \
+	|| DT_NODE_HAS_STATUS(DT_NODELABEL(lpi2c6), okay))
+	/* Configure LPI2C0506 using SYS_PLL3_DIV2_CLK */
+	rootCfg.mux = kCLOCK_LPI2C0506_ClockRoot_MuxSysPll3Div2;
+	rootCfg.div = 4;
+	CLOCK_SetRootClock(kCLOCK_Root_Lpi2c0506, &rootCfg);
+#endif
+
 #if defined(CONFIG_SPI_MCUX_LPSPI) && \
 	(DT_NODE_HAS_STATUS(DT_NODELABEL(lpspi1), okay) \
 	|| DT_NODE_HAS_STATUS(DT_NODELABEL(lpspi2), okay))
@@ -232,6 +250,38 @@ static ALWAYS_INLINE void clock_init(void)
 	rootCfg.div = 2;
 	CLOCK_SetRootClock(kCLOCK_Root_Lpspi0102, &rootCfg);
 #endif
+
+#if defined(CONFIG_COUNTER_MCUX_GPT)
+
+#if (DT_NODE_HAS_STATUS(DT_NODELABEL(gpt1), okay))
+	/* Configure GPT1 using SYS_PLL3_DIV2_CLK */
+	rootCfg.mux = kCLOCK_GPT1_ClockRoot_MuxSysPll3Div2;
+	rootCfg.div = 1;
+	CLOCK_SetRootClock(kCLOCK_Root_Gpt1, &rootCfg);
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpt1), okay) */
+
+#if (DT_NODE_HAS_STATUS(DT_NODELABEL(gpt2), okay))
+	/* Configure GPT2 using SYS_PLL3_DIV2_CLK */
+	rootCfg.mux = kCLOCK_GPT2_ClockRoot_MuxSysPll3Div2;
+	rootCfg.div = 1;
+	CLOCK_SetRootClock(kCLOCK_Root_Gpt2, &rootCfg);
+#endif /* DT_NODE_HAS_STATUS(DT_NODELABEL(gpt2), okay) */
+
+#endif /* CONFIG_COUNTER_MCUX_GPT */
+
+#ifdef CONFIG_MCUX_ACMP
+
+#if (DT_NODE_HAS_STATUS(DT_NODELABEL(acmp1), okay)  \
+	|| DT_NODE_HAS_STATUS(DT_NODELABEL(acmp2), okay) \
+	|| DT_NODE_HAS_STATUS(DT_NODELABEL(acmp3), okay) \
+	|| DT_NODE_HAS_STATUS(DT_NODELABEL(acmp4), okay))
+	/* Configure ACMP using MuxSysPll3Out */
+	rootCfg.mux = kCLOCK_ACMP_ClockRoot_MuxSysPll3Out;
+	rootCfg.div = 2;
+	CLOCK_SetRootClock(kCLOCK_Root_Acmp, &rootCfg);
+#endif
+
+#endif /* CONFIG_MCUX_ACMP */
 
 	/* Keep core clock ungated during WFI */
 	CCM->LPCG[1].LPM0 = 0x33333333;
@@ -344,7 +394,7 @@ static ALWAYS_INLINE void trdc_enable_all_access(void)
  * @return 0
  */
 
-static int imxrt_init(void)
+void soc_early_init_hook(void)
 {
 	/* Initialize system clock */
 	clock_init();
@@ -359,15 +409,11 @@ static int imxrt_init(void)
 #endif
 	__ISB();
 	__DSB();
-
-	return 0;
 }
 
-#ifdef CONFIG_PLATFORM_SPECIFIC_INIT
-void z_arm_platform_init(void)
+#ifdef CONFIG_SOC_RESET_HOOK
+void soc_reset_hook(void)
 {
 	SystemInit();
 }
 #endif
-
-SYS_INIT(imxrt_init, PRE_KERNEL_1, 0);

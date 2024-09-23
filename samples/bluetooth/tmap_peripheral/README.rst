@@ -1,7 +1,8 @@
-.. _bluetooth_tmap_peripheral:
+.. zephyr:code-sample:: ble_peripheral_tmap_peripheral
+   :name: TMAP (Peripheral)
+   :relevant-api: bt_audio bt_bap bluetooth
 
-Bluetooth: TMAP Peripheral
-##########################
+   Implement the LE Audio TMAP central functionality (CT and UMR roles).
 
 Overview
 ********
@@ -19,4 +20,4 @@ Building and Running
 This sample can be found under
 :zephyr_file:`samples/bluetooth/tmap_peripheral` in the Zephyr tree.
 
-See :ref:`bluetooth samples section <bluetooth-samples>` for details.
+See :zephyr:code-sample-category:`bluetooth` samples for details.

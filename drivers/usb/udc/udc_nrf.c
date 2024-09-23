@@ -177,7 +177,8 @@ static void udc_event_xfer_in(const struct device *dev,
 
 		udc_ep_set_busy(dev, ep, false);
 		if (ep == USB_CONTROL_EP_IN) {
-			return udc_event_xfer_ctrl_in(dev, buf);
+			udc_event_xfer_ctrl_in(dev, buf);
+			return;
 		}
 
 		udc_submit_ep_event(dev, buf, 0);
@@ -553,7 +554,7 @@ static int udc_nrf_ep_enable(const struct device *dev,
 	uint16_t mps;
 
 	__ASSERT_NO_MSG(cfg);
-	mps = (cfg->mps == 0) ? cfg->caps.mps : cfg->mps;
+	mps = (udc_mps_ep_size(cfg) == 0) ? cfg->caps.mps : udc_mps_ep_size(cfg);
 	nrf_usbd_common_ep_max_packet_size_set(cfg->addr, mps);
 	nrf_usbd_common_ep_enable(cfg->addr);
 	if (!NRF_USBD_EPISO_CHECK(cfg->addr)) {

@@ -1,7 +1,8 @@
-.. _bluetooth_tmap_bms:
+.. zephyr:code-sample:: ble_peripheral_tmap_bms
+   :name: TMAP Broadcast Media Sender (BMS)
+   :relevant-api: bt_audio bt_bap bluetooth
 
-Bluetooth: TMAP BMS
-###################
+   Implement the LE Audio TMAP Broadcast Media Sender (BMS) role.
 
 Overview
 ********
@@ -19,4 +20,4 @@ Building and Running
 ********************
 This sample can be found under :zephyr_file:`samples/bluetooth/tmap_bms` in the Zephyr tree.
 
-See :ref:`bluetooth samples section <bluetooth-samples>` for details.
+See :zephyr:code-sample-category:`bluetooth` samples for details.
